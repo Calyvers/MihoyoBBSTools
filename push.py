@@ -377,9 +377,10 @@ class PushHandler:
         qmsg
         """
         channels = [c.strip() for c in self.cfg.get("qmsg","channel").split(',')]
+        api_url = self.cfg.get("qmsg", "api_url")
         if "chat" in channels:
             rep = self.http.post(
-                url=f'https://qmsg.zendee.cn/send/{self.cfg.get("qmsg", "key")}',
+                url=f'{api_url}/send/{self.cfg.get("qmsg", "key")}',
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
                 data={
                     "msg": get_push_title(status_id) + "\n" + push_message
@@ -388,7 +389,7 @@ class PushHandler:
             log.info(f"chat推送结果：{rep['reason']}")
         if "group" in channels:
             rep = self.http.post(
-                url=f'https://qmsg.zendee.cn/group/{self.cfg.get("qmsg", "key")}',
+                url=f'{api_url}/group/{self.cfg.get("qmsg", "key")}',
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
                 data={
                     "msg": get_push_title(status_id) + "\n" + push_message

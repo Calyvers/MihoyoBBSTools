@@ -99,6 +99,7 @@ webhook_url=
 # https://qmsg.zendee.cn/user 获取key
 # channel 填写chat(私聊)/group(群聊)
 [qmsg]
+api_url=https://qmsg.zendee.cn
 key=你的qmsg酱key
 channel=chat
 
