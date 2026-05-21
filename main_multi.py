@@ -108,20 +108,15 @@ def main_multi(autorun: bool) -> tuple:
         config.config_Path = os.path.join(config.path, i)
         try:
             run_code, run_message = main.main()
-        except (CookieError, StokenError) as e:
-            results["error"].append(i)
-            if config.config.get("push", "") != "":
-                push_handler = push.PushHandler(config.config["push"])
-                all_message.append(f"账号 {i} Cookie/Stoken 出错")
-                error_msg = "账号 Cookie 出错！" if isinstance(e, CookieError) else "账号 Stoken 有问题！"
-                push_handler.push(1, error_msg)
-        else:
-            # 增强对返回值的处理，确保所有可能的情况都被考虑到
             if run_code == 0:
                 results["ok"].append(i)
             elif run_code == 1 or run_code == 2:
                 # 处理明确的失败状态
                 results["error"].append(i)
+                if run_message == "CookieError":
+                    all_message.append(f"账号 {i} Cookie 出错")
+                if "Stoken" in run_message:
+                    all_message.append(f"账号 {i} Stoken 出错")
             elif run_code == 3:
                 results["captcha"].append(i)
             else:

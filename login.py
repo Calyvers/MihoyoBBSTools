@@ -101,9 +101,11 @@ def require_mid() -> bool:
 
     :return: 是否需要mid
     """
-    if config.config["account"]["stoken"].startswith("v2_"):
-        return True
-    return False
+    if config.config["account"]["stoken"]:
+        if config.config["account"]["stoken"].startswith("v2_"):
+            return True
+        return False
+    return True
 
 
 def get_stoken_cookie() -> str:

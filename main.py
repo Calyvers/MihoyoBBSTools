@@ -60,9 +60,11 @@ def run_mihoyobbs() -> Tuple[str, bool]:
     """执行米游社签到任务"""
     return_data = ""
     raise_stoken = False
-
+    print(config.config["mihoyobbs"]["enable"])
     if config.config["mihoyobbs"]["enable"]:
+        print(config.config["account"]["stoken"])
         if config.config["account"]["stoken"] == "StokenError":
+            log.error("米游社账号 Stoken 异常")
             return_data = "米游社：\n账号 Stoken 异常"
             raise_stoken = True
         else:
@@ -117,7 +119,7 @@ def main() -> Tuple[int, str]:
     handle_login()
 
     if config.config["account"]["cookie"] == "CookieError":
-        raise CookieError('Cookie expires')
+        return StatusCode.FAILURE.value, "CookieError"
 
     return_data = []
     status_code = StatusCode.SUCCESS.value
@@ -132,7 +134,7 @@ def main() -> Tuple[int, str]:
     run_web_activity()
 
     if raise_stoken:
-        raise StokenError("Stoken 异常")
+        status_code = StatusCode.FAILURE.value
 
     result_msg = "\n".join(filter(None, return_data))
     if "触发验证码" in result_msg:
@@ -147,6 +149,8 @@ def task_run() -> None:
     try:
         status_code, message = main()
         push_message = message
+        if message == "CookieError":
+            push_message = "账号 Cookie 有问题！"
         status_points, result_points = captcha.get_points()
         if status_points == 0:
             log.info(f"ttocr剩余点数：{result_points}")
@@ -155,11 +159,11 @@ def task_run() -> None:
             push_message += f"ttocr点数查询失败：{result_points}"
         elif status_points == 2:
             push_message += f"ttocr点数请求异常：{str(result_points)}"
-    except CookieError:
+    except:
+        log.error("发生未知错误！")
+        push_message = "发生未知错误！"
         status_code = StatusCode.FAILURE.value
-        push_message = f"账号 Cookie 出错！\n{message}"
-        log.error("账号 Cookie 有问题！")
-    except StokenError:
+    if "Stoken" in message:
         status_code = StatusCode.FAILURE.value
         push_message = f"账号 Stoken 出错！\n{message}"
         log.error("账号 Stoken 有问题！")
