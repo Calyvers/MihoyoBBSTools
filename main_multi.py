@@ -122,6 +122,9 @@ def main_multi(autorun: bool) -> tuple:
             else:
                 # 其他未知状态归类为未执行
                 results["close"].append(i)
+        except:
+            log.error(f"账号 {i} 发生未知错误！")
+            all_messages.append(f"账号 {i} 发生未知错误！")
         all_messages.append(f"配置文件 {i}:\n\n{run_message.strip()}\n")
         log.info(f"{i} 执行完毕")
         
