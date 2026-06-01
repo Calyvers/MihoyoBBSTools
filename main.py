@@ -60,9 +60,8 @@ def run_mihoyobbs() -> Tuple[str, bool]:
     """执行米游社签到任务"""
     return_data = ""
     raise_stoken = False
-    print(config.config["mihoyobbs"]["enable"])
+    
     if config.config["mihoyobbs"]["enable"]:
-        print(config.config["account"]["stoken"])
         if config.config["account"]["stoken"] == "StokenError":
             log.error("米游社账号 Stoken 异常")
             return_data = "米游社：\n账号 Stoken 异常"
