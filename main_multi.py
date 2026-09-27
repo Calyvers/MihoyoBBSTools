@@ -106,6 +106,7 @@ def main_multi(autorun: bool) -> tuple:
     for i in config_list:
         log.info(f"正在执行 {i}")
         config.config_Path = os.path.join(config.path, i)
+        run_message = "未执行"
         try:
             run_code, run_message = main.main()
             if run_code == 0:
@@ -114,17 +115,18 @@ def main_multi(autorun: bool) -> tuple:
                 # 处理明确的失败状态
                 results["error"].append(i)
                 if run_message == "CookieError":
-                    all_message.append(f"账号 {i} Cookie 出错")
+                    all_messages.append(f"账号 {i} Cookie 出错")
                 if "Stoken" in run_message:
-                    all_message.append(f"账号 {i} Stoken 出错")
+                    all_messages.append(f"账号 {i} Stoken 出错")
             elif run_code == 3:
                 results["captcha"].append(i)
             else:
                 # 其他未知状态归类为未执行
                 results["close"].append(i)
-        except:
-            log.error(f"账号 {i} 发生未知错误！")
-            all_messages.append(f"账号 {i} 发生未知错误！")
+        except Exception as exc:
+            log.exception(f"账号 {i} 发生未知错误！")
+            results["error"].append(i)
+            run_message = f"发生未知错误：{exc}"
         all_messages.append(f"配置文件 {i}:\n\n{run_message.strip()}\n")
         log.info(f"{i} 执行完毕")
         
@@ -145,7 +147,7 @@ def main_multi(autorun: bool) -> tuple:
     elif status_points == 1:
         push_message += f"\nttocr点数查询失败：{result_points}"
     elif status_points == 2:
-        push_message += f"\nttocr点数请求异常：{str(e)}"
+        push_message += f"\nttocr点数请求异常：{str(result_points)}"
     log.info(push_message)
     # 更清晰的状态码逻辑
     status = 0  # 默认成功
@@ -156,6 +158,8 @@ def main_multi(autorun: bool) -> tuple:
     elif len(results["captcha"]) != 0:
         status = 3  # 有验证码触发
     
+    if results["close"] and status == 0:
+        status = 1 if len(results["close"]) == len(config_list) else 2
     return status, push_message
 
 

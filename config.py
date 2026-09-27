@@ -106,7 +106,8 @@ def config_v13_update(data: dict):
 
     # 确保版本号更新为14
     new_config['version'] = 14
-    new_config['device']['fp'] = config['device'].get('fp', '')
+    new_config.setdefault('device', deepcopy(config_raw['device']))
+    new_config['device']['fp'] = data.get('device', {}).get('fp', new_config['device'].get('fp', ''))
 
     log.info("config 已升级到：14")
     return new_config
@@ -136,11 +137,14 @@ def update_v15_update(data: dict):
 
 
 def load_config(p_path=None):
-    global config
+    global config, update_config_need
+    update_config_need = False
     if not p_path:
         p_path = config_Path
     with open(p_path, "r", encoding='utf-8') as f:
         data = yaml.load(f, Loader=yaml.FullLoader)
+    if not isinstance(data, dict) or type(data.get('version')) is not int or data['version'] not in range(11, 17):
+        raise ValueError('不支持的配置版本：仅支持整数版本 11–16，不会自动覆盖原文件')
     if data['version'] != config_raw['version']:
         if data['version'] == 11:
             data = config_v11_update(data)
@@ -152,7 +156,7 @@ def load_config(p_path=None):
             data = update_v14_update(data)
         if data['version'] == 15:
             data = update_v15_update(data)
-        save_config(p_config=data)
+        save_config(p_path=p_path, p_config=data)
     # 去除cookie最末尾的空格
     data["account"]["cookie"] = str(data["account"]["cookie"]).rstrip(' ')
     config = data

@@ -5,7 +5,7 @@ import config
 import random
 import captcha
 import setting
-from error import *
+from error import CookieError
 from request import get_new_session
 from loghelper import log
 from account import get_account_list

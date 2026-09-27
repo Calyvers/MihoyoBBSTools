@@ -76,7 +76,8 @@ def captcha(gt: str, challenge: str):
                         "challenge": challenge  # 使用传入的 challenge
                     }
                 elif rep2.get("status") == 4039:
-                    log.warning(f"请求失败{rep2.get(msg)},正在尝试重新查询")
+                    log.warning(f"请求失败{rep2.get('msg')},正在尝试重新查询")
+                    time.sleep(interval)
                 else:
                     log.error(rep2)
                     return None

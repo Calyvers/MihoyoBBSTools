@@ -9,7 +9,7 @@ import hashlib
 from datetime import datetime, timezone
 from request import get_new_session, get_new_session_use_proxy
 from loghelper import log
-from configparser import ConfigParser, NoOptionError
+from configparser import ConfigParser, NoOptionError, NoSectionError
 
 title = {
     -99: "「米游社脚本」依赖缺失",
@@ -63,7 +63,7 @@ class PushHandler:
         try:
             block_str = self.cfg.get('setting', 'push_block_keys')
             block_keys = block_str.split(',')
-        except:
+        except (NoOptionError, NoSectionError):
             return msg
         else:
             for block_key in block_keys:
@@ -171,8 +171,8 @@ class PushHandler:
         def get_background_url():
             try:
                 _image_url = self.http.get("https://www.loliapi.com/acg/pc/").url
-            except:
-                _image_url = "unable to get the image"
+            except Exception:
+                _image_url = ""
                 log.warning("获取随机背景图失败，请检查图片 api")
             return _image_url
 
@@ -446,8 +446,10 @@ class PushHandler:
         try:
             from win11toast import toast
             toast(app_id="MihoyoBBSTools", title=get_push_title(status_id), body=push_message, icon='')
-        except:
-            log.error(f"请先pip install win11toast再使用win通知")
+        except ImportError:
+            log.error("请先pip install win11toast再使用win通知")
+        except Exception:
+            log.exception("Windows 通知失败")
 
     def wxpusher(self, status_id, push_message):
         """
@@ -455,7 +457,7 @@ class PushHandler:
         """
         try:
             from wxpusher import WxPusher
-        except:
+        except ImportError:
             log.error("WxPusher 模块未安装，请先执行pip install wxpusher")
             return 1
         app_token = self.cfg.get('wxpusher', 'app_token', fallback=None)

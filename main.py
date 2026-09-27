@@ -71,6 +71,7 @@ def run_mihoyobbs() -> Tuple[str, bool]:
                 bbs = mihoyobbs.Mihoyobbs()
                 return_data = bbs.run_task()
             except StokenError:
+                return_data = "米游社：\n账号 Stoken 异常"
                 raise_stoken = True
     return return_data, raise_stoken
 
@@ -145,6 +146,7 @@ def main() -> Tuple[int, str]:
 def task_run() -> None:
     """任务运行入口"""
 
+    message = ""
     try:
         status_code, message = main()
         push_message = message
@@ -158,8 +160,8 @@ def task_run() -> None:
             push_message += f"ttocr点数查询失败：{result_points}"
         elif status_points == 2:
             push_message += f"ttocr点数请求异常：{str(result_points)}"
-    except:
-        log.error("发生未知错误！")
+    except Exception:
+        log.exception("任务执行失败")
         push_message = "发生未知错误！"
         status_code = StatusCode.FAILURE.value
     if "Stoken" in message:

@@ -87,7 +87,7 @@ class DaCapoAdapter:
         checkin_list = task_config.get("米游社BBS", {}).get("签到版块列表", "")
         try:
             self._convert_checkin_list(checkin_list)
-        except:
+        except (TypeError, ValueError):
             return False, "签到版块列表格式错误，应为用逗号分隔的数字"
         
         retries = task_config.get("国服游戏", {}).get("重试次数", "3")

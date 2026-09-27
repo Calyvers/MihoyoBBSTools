@@ -28,21 +28,12 @@ def is_module_imported(module_name):
 
 
 def get_new_session_use_proxy(http_proxy: str):
-    if is_module_imported("httpx"):
-        proxies = {
-            "http://": f'http://{http_proxy}',
-            "https://": f'http://{http_proxy}'
-        }
-        return get_new_session(proxies=proxies)
-        # httpx 版本大于0.26.0可用
-        # return get_new_session(proxy=f'http://{http_proxy}')
-    else:
-        session = get_new_session()
-        session.proxies = {
-            "http": f'http://{http_proxy}',
-            "https": f'http://{http_proxy}'
-        }
-        return session
+    proxy = http_proxy if "://" in http_proxy else f"http://{http_proxy}"
+    session = get_new_session(proxy=proxy)
+    # The requests fallback must retain proxy settings too.
+    if hasattr(session, "proxies"):
+        session.proxies.update({"http": proxy, "https": proxy})
+    return session
 
 
 http = get_new_session()
