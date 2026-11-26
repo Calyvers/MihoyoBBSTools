@@ -161,21 +161,19 @@ class Mihoyobbs:
                 header.pop("x-rpc-challenge")
 
     def run_task(self):
-        return_data = "米游社: "
+        log.push("米游社：")
         if self.task_do["sign"]:
-            return_data += "\n" + f"今天已经全部完成了！\n" \
-                                  f"一共获得 {self.today_have_get_coins} 个米游币\n目前有 {self.have_coins} 个米游币"
-            log.info(f"今天已经全部完成了！一共获得 {self.today_have_get_coins} 个米游币，目前有 {self.have_coins} 个米游币")
-            return return_data
+            log.push("今天已经全部完成了！")
+            log.push(f"一共获得 {self.today_have_get_coins} 个米游币")
+            log.push(f"目前有 {self.have_coins} 个米游币")
+            return
         i = 0
         while self.today_get_coins != 0 and i < 2:
             if self.bbs_config["checkin"]:
                 self.signing()
             self.get_tasks_list()
             i += 1
-        return_data += "\n" + f"今天已经获得 {self.today_have_get_coins} 个米游币\n" \
-                              f"还能获得 {self.today_get_coins} 个米游币\n目前有 {self.have_coins} 个米游币"
-        log.info(f"今天已经获得 {self.today_have_get_coins} 个米游币，"
-                 f"还能获得 {self.today_get_coins} 个米游币，目前有 {self.have_coins} 个米游币")
+        log.push(f"今天已经获得 {self.today_have_get_coins} 个米游币")
+        log.push(f"还能获得 {self.today_get_coins} 个米游币")
+        log.push(f"目前有 {self.have_coins} 个米游币")
         wait()
-        return return_data

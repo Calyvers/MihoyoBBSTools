@@ -6,7 +6,7 @@ import push
 import config
 import random
 import captcha
-from loghelper import log
+from loghelper import log, clear_push_message, drain_push_message
 from error import CookieError, StokenError
 
 
@@ -101,6 +101,7 @@ def main_multi(autorun: bool) -> tuple:
             input("请输入回车继续，需要重新搜索配置文件请 Ctrl+C 退出脚本")
         except KeyboardInterrupt:
             exit(0)
+    clear_push_message()
     results = {"ok": [], "close": [], "error": [], "captcha": []}
     all_messages = []
     for i in config_list:
@@ -116,17 +117,19 @@ def main_multi(autorun: bool) -> tuple:
                 results["error"].append(i)
                 if run_message == "CookieError":
                     all_messages.append(f"账号 {i} Cookie 出错")
-                if "Stoken" in run_message:
-                    all_messages.append(f"账号 {i} Stoken 出错")
             elif run_code == 3:
                 results["captcha"].append(i)
             else:
                 # 其他未知状态归类为未执行
                 results["close"].append(i)
+        except (CookieError, StokenError) as exc:
+            results["error"].append(i)
+            error_msg = "账号 Cookie 出错！" if isinstance(exc, CookieError) else "账号 Stoken 有问题！"
+            run_message = "\n".join(filter(None, [drain_push_message(), error_msg]))
         except Exception as exc:
             log.exception(f"账号 {i} 发生未知错误！")
             results["error"].append(i)
-            run_message = f"发生未知错误：{exc}"
+            run_message = "\n".join(filter(None, [drain_push_message(), f"发生未知错误：{exc}"]))
         all_messages.append(f"配置文件 {i}:\n\n{run_message.strip()}\n")
         log.info(f"{i} 执行完毕")
         

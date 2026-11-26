@@ -1,6 +1,7 @@
 import os
 import time
 import random
+import logging
 from typing import Tuple, Optional
 from enum import Enum
 
@@ -15,7 +16,7 @@ import hoyo_checkin
 import web_activity
 import os_cloudgames
 import captcha
-from loghelper import log
+from loghelper import log, clear_push_message, drain_push_message
 from error import CookieError, StokenError
 
 
@@ -63,50 +64,39 @@ def handle_login() -> None:
             log.warning(f"凭据补齐失败：{e}")
 
 
-
-def run_mihoyobbs() -> Tuple[str, bool]:
-    """执行米游社签到任务"""
-    return_data = ""
+def run_mihoyobbs() -> bool:
+    """执行米游社签到任务，返回是否 Stoken 异常"""
     raise_stoken = False
-    
+
     if config.config["mihoyobbs"]["enable"]:
         if config.config["account"]["stoken"] == "StokenError":
-            log.error("米游社账号 Stoken 异常")
-            return_data = "米游社：\n账号 Stoken 异常"
+            log.push("米游社：账号 Stoken 异常", level=logging.ERROR)
             raise_stoken = True
         else:
             try:
-                bbs = mihoyobbs.Mihoyobbs()
-                return_data = bbs.run_task()
+                mihoyobbs.Mihoyobbs().run_task()
             except StokenError:
-                return_data = "米游社：\n账号 Stoken 异常"
+                log.push("米游社：账号 Stoken 异常", level=logging.ERROR)
                 raise_stoken = True
-    return return_data, raise_stoken
+    return raise_stoken
 
 
-def run_cn_tasks() -> str:
+def run_cn_tasks() -> None:
     """执行国服任务"""
-    result = []
     if config.config["games"]['cn']["enable"]:
-        result.append(gamecheckin.run_task())
+        gamecheckin.run_task()
     if config.config["cloud_games"]['cn']["enable"]:
         log.info("正在进行云游戏签到")
-        result.append(cloudgames.run_task())
-    return "\n\n".join(filter(None, result))
+        cloudgames.run_task()
 
 
-def run_os_tasks() -> str:
+def run_os_tasks() -> None:
     """执行国际服任务"""
-    result = []
     if config.config["games"]['os']["enable"]:
-        log.info("海外版：")
-        os_result = hoyo_checkin.run_task()
-        if os_result:
-            result.append(f"海外版：{os_result}")
+        hoyo_checkin.run_task()
     if config.config["cloud_games"]['os']["enable"]:
         log.info("正在进行云游戏国际版签到")
-        result.append(os_cloudgames.run_task())
-    return "\n\n".join(filter(None, result))
+        os_cloudgames.run_task()
 
 
 def run_web_activity() -> None:
@@ -120,6 +110,8 @@ def main() -> Tuple[int, str]:
     """主执行函数"""
     check_github_actions()
 
+    clear_push_message()
+
     success, msg = initialize_config()
     if not success:
         return StatusCode.FAILURE.value, msg
@@ -128,55 +120,51 @@ def main() -> Tuple[int, str]:
     handle_login()
 
     if config.config["account"]["cookie"] == "CookieError":
-        return StatusCode.FAILURE.value, "CookieError"
-
-    return_data = []
-    status_code = StatusCode.SUCCESS.value
+        return StatusCode.FAILURE.value, "账号 Cookie 有问题！"
 
     # 执行各模块任务
-    mihoyo_result, raise_stoken = run_mihoyobbs()
-    return_data.append(mihoyo_result)
-
-    return_data.append(run_cn_tasks())
-    return_data.append(run_os_tasks())
-
+    raise_stoken = run_mihoyobbs()
+    run_cn_tasks()
+    run_os_tasks()
     run_web_activity()
+
+    result_msg = drain_push_message()
+    status_code = StatusCode.CAPTCHA_TRIGGERED.value if "触发验证码" in result_msg \
+        else StatusCode.SUCCESS.value
 
     if raise_stoken:
         status_code = StatusCode.FAILURE.value
-
-    result_msg = "\n".join(filter(None, return_data))
-    if "触发验证码" in result_msg:
-        status_code = StatusCode.CAPTCHA_TRIGGERED.value
-
     return status_code, result_msg
 
 
 def task_run() -> None:
     """任务运行入口"""
 
-    message = ""
     try:
-        status_code, message = main()
-        push_message = message
-        if message == "CookieError":
-            push_message = "账号 Cookie 有问题！"
-        status_points, result_points = captcha.get_points()
-        if status_points == 0:
-            log.info(f"ttocr剩余点数：{result_points}")
-            push_message += f"ttocr剩余点数：{result_points}"
-        elif status_points == 1:
-            push_message += f"ttocr点数查询失败：{result_points}"
-        elif status_points == 2:
-            push_message += f"ttocr点数请求异常：{str(result_points)}"
+        status_code, push_message = main()
+    except CookieError as e:
+        status_code = StatusCode.FAILURE.value
+        push_message = "\n".join(filter(None, [drain_push_message(), f"账号 Cookie 出错！\n{e}"]))
+        log.error("账号 Cookie 有问题！")
+    except StokenError as e:
+        status_code = StatusCode.FAILURE.value
+        push_message = "\n".join(filter(None, [drain_push_message(), f"账号 Stoken 出错！\n{e}"]))
+        log.error("账号 Stoken 有问题！")
     except Exception:
         log.exception("任务执行失败")
-        push_message = "发生未知错误！"
         status_code = StatusCode.FAILURE.value
-    if "Stoken" in message:
-        status_code = StatusCode.FAILURE.value
-        push_message = f"账号 Stoken 出错！\n{message}"
-        log.error("账号 Stoken 有问题！")
+        push_message = "\n".join(filter(None, [drain_push_message(), "发生未知错误，请查看日志！"]))
+
+    try:
+        status_points, result_points = captcha.get_points()
+        labels = {0: "ttocr剩余点数", 1: "ttocr点数查询失败", 2: "ttocr点数请求异常"}
+        if status_points in labels:
+            point_message = f"{labels[status_points]}：{result_points}"
+            log.info(point_message)
+            push_message = "\n".join(filter(None, [push_message, point_message]))
+    except Exception:
+        log.exception("ttocr点数查询异常")
+        push_message += "\nttocr点数查询异常，请查看日志"
 
     push.push(status_code, push_message)
 
